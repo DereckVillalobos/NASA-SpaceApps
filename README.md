@@ -32,7 +32,7 @@ El servidor escucha en loopback. No dispone de autenticación ni separación por
 6. Comparar dimensiones, reglas acotadas de pH y estadísticas climáticas, y descargar evidencia JSON. PASS confirma únicamente la condición especificada. Aptitud integral de suelo/clima y efectos de rotación siguen UNKNOWN.
 7. En una evaluación v2, consultar qué información falta y explorar un cambio hipotético de fecha, cultivo, riego declarado o pH conocido. El cambio no se guarda y no es un pronóstico.
 
-Los registros de fincas, parcelas y suelo se agregan, no se editan. Una corrección de suelo conserva el registro anterior. Las alternativas sí se pueden revisar; cada guardado incrementa su versión. Las evaluaciones conservan la instantánea anterior de todos sus datos.
+Las fincas y parcelas permiten correcciones con historial de revisiones y nueva procedencia. La interfaz permite consultarlo y rechaza sobrescrituras desde revisiones obsoletas. Cantón y distrito son declaraciones opcionales; no se infieren del punto geográfico. Una corrección de suelo conserva el registro anterior. Las alternativas sí se pueden revisar; cada guardado incrementa su versión. Las evaluaciones conservan la instantánea anterior de todos sus datos.
 
 ## Verificación
 
@@ -62,8 +62,10 @@ En una carpeta sincronizada por OneDrive, un build repetido puede recibir `EPERM
 - [Reglas estructurales y sus límites](docs/REGLAS.md)
 - [Investigación NASA POWER y fuentes](docs/FUENTES.md)
 - [Resultados reales de verificación](docs/VERIFICACION.md)
+- [Auditoría, plan y verificación de fase 3](docs/FASE3.md)
 - [Auditoría de fase 2](docs/AUDITORIA_FASE2.md)
 - [Fuentes y método de fase 2](docs/FUENTES_FASE2.md)
 - [Verificación de fase 2](docs/VERIFICACION_FASE2.md)
 
 El alcance es un comparador histórico y trazable. No valida rendimientos, fertilización, recuperación del suelo, erosión, balances hídricos ni una «mejor rotación». Las reglas de pH son comparaciones específicas basadas en guías costarricenses y requieren revisión agronómica local antes de recomendar intervenciones. El contrafactual v1 recalcula internamente toda la evaluación y muestra sólo los resultados modificados; la optimización incremental por regla queda pendiente.
+

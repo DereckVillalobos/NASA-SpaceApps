@@ -80,3 +80,47 @@ test("muestra fallos de conexión del clima sin fabricar resultados",async({page
   await expect(page.locator(".error[role=alert]")).toContainText("No fue posible conectar");
   await expect(page.getByText("días con datos")).toHaveCount(0);
 });
+
+
+const provenance={kind:"DECLARED",source:"Fixture sintético de API E2E",method:"Prueba",date:"2025-01-01",resolution:null,assumptions:[],hypothetical:true};
+const input={name:"Finca revisable E2E",coordinates:{latitude:10.19,longitude:-84.39},resources:{irrigation:null,labor:null,equipment:null,budget:null},priorities:[],provenance};
+test("API conserva revisiones, aislamiento y conflictos",async({request})=>{
+  const created=await request.post("/api/farms",{data:input});expect(created.status()).toBe(201);const farm=await created.json();
+  const updated=await request.put("/api/farms",{data:{id:farm.id,expectedRevision:1,data:{...input,canton:"Zarcero",district:null}}});expect(updated.status()).toBe(200);expect((await updated.json()).revision).toBe(2);
+  const conflict=await request.put("/api/farms",{data:{id:farm.id,expectedRevision:1,data:input}});expect(conflict.status()).toBe(409);
+  const history=await (await request.get(`/api/farms?historyId=${farm.id}`)).json();expect(history).toHaveLength(2);expect(history[0]).toEqual(farm);
+  const parcelInput={farmId:farm.id,name:"Parcela E2E revisable",area:{value:1,unit:"ha"},history:null,provenance};
+  const parcel=await (await request.post("/api/parcels",{data:parcelInput})).json();
+  const corrected=await request.put("/api/parcels",{data:{id:parcel.id,expectedRevision:1,data:{...parcelInput,area:{value:2500,unit:"m2"}}}});expect(corrected.status()).toBe(200);expect((await corrected.json()).areaM2).toBe(2500);
+  expect(await (await request.get(`/api/parcels?historyId=${parcel.id}`)).json()).toHaveLength(2);
+  const other=await (await request.post("/api/farms",{data:input})).json();
+  const move=await request.put("/api/parcels",{data:{id:parcel.id,expectedRevision:2,data:{...parcelInput,farmId:other.id}}});expect(move.status()).toBe(409);
+  expect(await (await request.get(`/api/parcels?farmId=${other.id}`)).json()).toEqual([]);
+  const invalid=await request.put("/api/farms",{data:{id:farm.id,expectedRevision:0,data:input}});expect(invalid.status()).toBe(400);
+});
+test("corrige finca y parcela desde formularios conservando sus versiones",async({page,request})=>{
+  const farm=await (await request.post("/api/farms",{data:{...input,name:"Finca UI correcciones"}})).json();
+  const parcel=await (await request.post("/api/parcels",{data:{farmId:farm.id,name:"Parcela UI",area:{value:1,unit:"ha"},history:null,provenance}})).json();
+  await page.goto("/");await page.getByLabel("Finca activa").selectOption(farm.id);
+  await expect(page.getByLabel("Parcela activa")).toHaveValue(parcel.id);
+  await page.getByRole("button",{name:"Corregir finca",exact:true}).click();
+  await expect(page.getByLabel("Nombre de la finca")).toHaveValue("Finca UI correcciones");
+  await expect(page.getByLabel("Este registro es hipotético")).toBeChecked();
+  await page.getByLabel("Nombre de la finca").fill("Finca UI corregida");
+  await page.getByLabel("Cantón (opcional)").fill("Zarcero");
+  await page.getByLabel("Fuente o responsable").fill("Corrección hipotética de prueba");
+  await page.getByRole("button",{name:"Guardar corrección de finca"}).click();
+  await expect(page.getByRole("status")).toContainText("Corrección de finca guardada");
+  await page.getByRole("button",{name:"Corregir parcela activa"}).click();
+  await expect(page.getByLabel("Nombre de la parcela")).toHaveValue("Parcela UI");
+  await page.getByLabel("Superficie",{exact:true}).fill("2");
+  await page.getByLabel("Fuente o responsable").fill("Corrección de superficie hipotética");
+  await page.getByRole("button",{name:"Guardar corrección de parcela"}).click();
+  await expect(page.getByRole("status")).toContainText("Corrección de parcela guardada");
+  expect(await (await request.get(`/api/farms?historyId=${farm.id}`)).json()).toHaveLength(2);
+  expect(await (await request.get(`/api/parcels?historyId=${parcel.id}`)).json()).toHaveLength(2);
+  await page.getByRole("button",{name:"Historial de parcela activa"}).click();
+  await expect(page.getByText("Versiones conservadas: 2")).toBeVisible();
+  await page.setViewportSize({width:390,height:844});
+  expect(await page.evaluate(()=>document.documentElement.scrollWidth<=window.innerWidth)).toBe(true);
+});

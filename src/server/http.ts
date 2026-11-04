@@ -1,5 +1,5 @@
 import { ZodError } from "zod";
-import { NotFound } from "./repository";
+import { NotFound, RevisionConflict } from "./repository";
 import { PowerError } from "../modules/climate/power";
 export class InputError extends Error {}
 export async function body(request:Request) {
@@ -17,6 +17,7 @@ export async function handle(fn:()=>unknown|Promise<unknown>,status=200) {
   try{return Response.json(await fn(),{status,headers:{"Cache-Control":"no-store"}});}
   catch(error){
     if(error instanceof ZodError) return Response.json({error:"Revise los campos",issues:error.issues.map(i=>({field:i.path.join("."),message:i.message}))},{status:400});
+    if(error instanceof RevisionConflict) return Response.json({error:error.message},{status:409});
     if(error instanceof NotFound) return Response.json({error:error.message},{status:404});
     if(error instanceof InputError) return Response.json({error:error.message},{status:400});
     if(error instanceof PowerError) return Response.json({error:error.message},{status:error.status});
@@ -24,3 +25,4 @@ export async function handle(fn:()=>unknown|Promise<unknown>,status=200) {
     return Response.json({error:"No se pudo completar la operación. Revise el registro del servidor."},{status:500});
   }
 }
+
