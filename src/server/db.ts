@@ -7,7 +7,7 @@ export function openDatabase(filename = process.env.SUELORUTA_DB || "data/suelor
   const db = new DatabaseSync(filename);
   db.exec("PRAGMA foreign_keys=ON; PRAGMA busy_timeout=5000; PRAGMA journal_mode=WAL;");
   const version = (db.prepare("PRAGMA user_version").get() as {user_version:number}).user_version;
-  if (version > 2) throw new Error("Versión de base de datos no compatible");
+  if (version > 3) throw new Error("Versión de base de datos no compatible");
   if (version === 0) db.exec(`
     BEGIN;
     CREATE TABLE provenance (id TEXT PRIMARY KEY, payload TEXT NOT NULL);
@@ -29,7 +29,17 @@ export function openDatabase(filename = process.env.SUELORUTA_DB || "data/suelor
     PRAGMA user_version=2;
     COMMIT;
   `);
+  if (version < 3) db.exec(`
+    BEGIN;
+    CREATE TABLE farm_revisions (entity_id TEXT NOT NULL REFERENCES farms(id), revision INTEGER NOT NULL CHECK(revision > 0), payload TEXT NOT NULL, PRIMARY KEY(entity_id, revision));
+    CREATE TABLE parcel_revisions (entity_id TEXT NOT NULL REFERENCES parcels(id), revision INTEGER NOT NULL CHECK(revision > 0), payload TEXT NOT NULL, PRIMARY KEY(entity_id, revision));
+    INSERT INTO farm_revisions SELECT id, 1, payload FROM farms;
+    INSERT INTO parcel_revisions SELECT id, 1, payload FROM parcels;
+    PRAGMA user_version=3;
+    COMMIT;
+  `);
   return db;
 }
 let shared: DatabaseSync | undefined;
 export function database() { return shared ??= openDatabase(); }
+

@@ -5,4 +5,5 @@ export function toSquareMeters(area: z.infer<typeof areaSchema>) { const a = are
 export const historySchema = z.object({ crop: text, start: date.nullable(), end: date.nullable(), notes: text.nullable() }).strict().refine(v => !v.start || !v.end || v.start <= v.end, "Las fechas del antecedente están invertidas");
 export const parcelSchema = z.object({ farmId: z.uuid(), name: text, area: areaSchema, history: z.array(historySchema).max(100).nullable(), provenance: provenanceSchema }).strict();
 export type ParcelInput = z.infer<typeof parcelSchema>;
-export type Parcel = Stored<ParcelInput> & { areaM2: number; areaMethod: string };
+export type Parcel = Stored<ParcelInput> & { areaM2: number; areaMethod: string; revision?: number };
+
